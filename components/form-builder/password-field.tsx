@@ -29,7 +29,10 @@ const PASSWORD_REQUIREMENTS: PasswordRequirement[] = [
   { label: "One uppercase letter", test: (pwd) => /[A-Z]/.test(pwd) },
   { label: "One lowercase letter", test: (pwd) => /[a-z]/.test(pwd) },
   { label: "One number", test: (pwd) => /\d/.test(pwd) },
-  { label: "One special character", test: (pwd) => /[!@#$%^&*(),.?":{}|<>]/.test(pwd) },
+  {
+    label: "One special character",
+    test: (pwd) => /[!@#$%^&*(),.?":{}|<>]/.test(pwd),
+  },
 ];
 
 export function PasswordField({
@@ -53,7 +56,9 @@ export function PasswordField({
       return null;
     }
 
-    const failedRequirements = PASSWORD_REQUIREMENTS.filter(req => !req.test(password));
+    const failedRequirements = PASSWORD_REQUIREMENTS.filter(
+      (req) => !req.test(password)
+    );
     if (failedRequirements.length > 0) {
       return `Password must meet all requirements`;
     }
@@ -64,7 +69,7 @@ export function PasswordField({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     onChange(newValue);
-    
+
     // Clear local error when user starts typing
     if (localError) {
       setLocalError(null);
@@ -78,7 +83,6 @@ export function PasswordField({
   };
 
   const showError = error || localError;
-  const errorMessage = localError || (error ? "Invalid password" : "");
 
   const getRequirementStatus = (requirement: PasswordRequirement) => {
     if (!value) return null;
@@ -87,7 +91,7 @@ export function PasswordField({
 
   return (
     <div className="space-y-2">
-      <div className="relative">
+      <div className="relative w-full">
         <Input
           id={id}
           type={showPassword ? "text" : "password"}
@@ -97,7 +101,7 @@ export function PasswordField({
           value={value}
           name={name as string}
           className={cn(
-            "pr-10",
+            "pr-10 w-full",
             className,
             showError && "border-destructive ring-destructive/20"
           )}
@@ -108,7 +112,7 @@ export function PasswordField({
           type="button"
           variant="ghost"
           size="icon"
-          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+          className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
           onClick={() => setShowPassword(!showPassword)}
           disabled={!value}
         >
@@ -125,18 +129,25 @@ export function PasswordField({
 
       {value && (
         <div className="space-y-1">
-          <p className="text-sm font-medium text-gray-700">Password requirements:</p>
+          <p className="text-sm font-medium text-gray-700">
+            Password requirements:
+          </p>
           <div className="space-y-1">
             {PASSWORD_REQUIREMENTS.map((requirement, index) => {
               const isValid = getRequirementStatus(requirement);
               return (
-                <div key={index} className="flex items-center space-x-2 text-sm">
+                <div
+                  key={index}
+                  className="flex items-center space-x-2 text-sm"
+                >
                   {isValid ? (
                     <Check className="h-4 w-4 text-green-500" />
                   ) : (
                     <X className="h-4 w-4 text-gray-400" />
                   )}
-                  <span className={isValid ? "text-green-700" : "text-gray-500"}>
+                  <span
+                    className={isValid ? "text-green-700" : "text-gray-500"}
+                  >
                     {requirement.label}
                   </span>
                 </div>
@@ -144,12 +155,6 @@ export function PasswordField({
             })}
           </div>
         </div>
-      )}
-
-      {showError && (
-        <p id={`${id}-error`} className="text-sm text-destructive">
-          {errorMessage}
-        </p>
       )}
     </div>
   );

@@ -23,15 +23,15 @@ export function NumberInput({
   required,
   className,
   error,
-  step
+  step,
 }: NumberInputProps) {
   const { onChange, onBlur, value, name } = field;
   const [localError, setLocalError] = useState<string | null>(null);
 
   const validateValue = (val: string | number): string | null => {
-    const numValue = typeof val === 'string' ? parseFloat(val) : val;
-    
-    if (val === '' || val === null || val === undefined) {
+    const numValue = typeof val === "string" ? parseFloat(val) : val;
+
+    if (val === "" || val === null || val === undefined) {
       if (required) {
         return "This field is required";
       }
@@ -56,7 +56,7 @@ export function NumberInput({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     onChange(newValue);
-    
+
     // Clear local error when user starts typing
     if (localError) {
       setLocalError(null);
@@ -66,11 +66,10 @@ export function NumberInput({
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const validationError = validateValue(e.target.value);
     setLocalError(validationError);
-    onBlur(e);
+    onBlur();
   };
 
   const showError = error || localError;
-  const errorMessage = localError || (error ? "Invalid number" : "");
 
   return (
     <div className="space-y-1">
@@ -84,15 +83,12 @@ export function NumberInput({
         onBlur={handleBlur}
         value={value}
         name={name as string}
-        className={`${className} ${showError ? 'border-destructive ring-destructive/20' : ''}`}
-        aria-invalid={showError}
+        className={`${className} ${
+          showError ? "border-destructive ring-destructive/20" : ""
+        }`}
+        aria-invalid={Boolean(showError)}
         aria-describedby={showError ? `${id}-error` : undefined}
       />
-      {showError && (
-        <p id={`${id}-error`} className="text-sm text-destructive">
-          {errorMessage}
-        </p>
-      )}
     </div>
   );
 }

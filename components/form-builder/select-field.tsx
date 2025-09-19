@@ -37,12 +37,14 @@ export function SelectField({
   options,
   clearable = false,
 }: SelectFieldProps) {
-  const { onChange, onBlur, value, name } = field;
+  const { onChange, onBlur, value } = field;
   const [localError, setLocalError] = useState<string | null>(null);
 
   const handleValueChange = (newValue: string) => {
-    onChange(newValue);
-    
+    // Handle clear selection special value
+    const actualValue = newValue === "__clear__" ? "" : newValue;
+    onChange(actualValue);
+
     // Clear local error when user makes a selection
     if (localError) {
       setLocalError(null);
@@ -60,12 +62,11 @@ export function SelectField({
   };
 
   const showError = error || localError;
-  const errorMessage = localError || (error ? "Please select a valid option" : "");
 
   return (
     <div className="space-y-1">
-      <Select 
-        value={value || ""} 
+      <Select
+        value={value || undefined}
         onValueChange={handleValueChange}
         onOpenChange={(open) => {
           if (!open) {
@@ -73,7 +74,7 @@ export function SelectField({
           }
         }}
       >
-        <SelectTrigger 
+        <SelectTrigger
           className={cn(
             className,
             showError && "border-destructive ring-destructive/20"
@@ -85,13 +86,13 @@ export function SelectField({
         </SelectTrigger>
         <SelectContent>
           {clearable && (
-            <SelectItem value="">
+            <SelectItem value="__clear__">
               <span className="text-muted-foreground">Clear selection</span>
             </SelectItem>
           )}
           {options.map((option) => (
-            <SelectItem 
-              key={option.value} 
+            <SelectItem
+              key={option.value}
               value={option.value}
               disabled={option.disabled}
             >
@@ -100,11 +101,6 @@ export function SelectField({
           ))}
         </SelectContent>
       </Select>
-      {showError && (
-        <p id={`${id}-error`} className="text-sm text-destructive">
-          {errorMessage}
-        </p>
-      )}
     </div>
   );
 }

@@ -14,7 +14,8 @@ interface UrlFieldProps {
 }
 
 // Enhanced URL validation regex
-const URL_REGEX = /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
+const URL_REGEX =
+  /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
 
 export function UrlField({
   field,
@@ -30,7 +31,7 @@ export function UrlField({
   const [isValidating, setIsValidating] = useState(false);
 
   const validateValue = (val: string): string | null => {
-    if (val === '' || val === null || val === undefined) {
+    if (val === "" || val === null || val === undefined) {
       if (required) {
         return "This field is required";
       }
@@ -51,7 +52,7 @@ export function UrlField({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     onChange(newValue);
-    
+
     // Clear local error when user starts typing
     if (localError) {
       setLocalError(null);
@@ -60,10 +61,10 @@ export function UrlField({
 
   const handleBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
     const urlValue = e.target.value.trim();
-    
+
     if (urlValue) {
       setIsValidating(true);
-      
+
       // Basic validation first
       const basicError = validateValue(urlValue);
       if (basicError) {
@@ -76,28 +77,29 @@ export function UrlField({
       // Simulate async validation (e.g., checking if URL is accessible)
       try {
         // In a real app, you might make an actual request here
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
         // Additional custom validation
         if (urlValue.includes("localhost") || urlValue.includes("127.0.0.1")) {
           setLocalError("Please enter a public URL, not a localhost address");
         } else {
           setLocalError(null);
         }
-      } catch (err) {
-        setLocalError("Unable to validate URL. Please check if it's accessible.");
+        } catch {
+          setLocalError(
+            "Unable to validate URL. Please check if it's accessible."
+          );
       } finally {
         setIsValidating(false);
       }
     } else {
       setLocalError(null);
     }
-    
+
     onBlur();
   };
 
   const showError = error || localError;
-  const errorMessage = localError || (error ? "Invalid URL format" : "");
 
   return (
     <div className="space-y-1">
@@ -109,7 +111,9 @@ export function UrlField({
           onBlur={handleBlur}
           value={value}
           name={name as string}
-          className={`${className} ${showError ? 'border-destructive ring-destructive/20' : ''}`}
+          className={`${className} ${
+            showError ? "border-destructive ring-destructive/20" : ""
+          }`}
           placeholder={placeholder}
           maxLength={maxLength}
           aria-invalid={Boolean(showError)}
@@ -121,11 +125,6 @@ export function UrlField({
           </div>
         )}
       </div>
-      {showError && (
-        <p id={`${id}-error`} className="text-sm text-destructive">
-          {errorMessage}
-        </p>
-      )}
     </div>
   );
 }

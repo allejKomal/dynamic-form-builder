@@ -34,8 +34,6 @@ interface MultiSelectFieldProps {
 
 export function MultiSelectField({
   field,
-  id,
-  required,
   className,
   placeholder,
   error,
@@ -43,7 +41,7 @@ export function MultiSelectField({
   searchable = true,
   maxSelections,
 }: MultiSelectFieldProps) {
-  const { onChange, onBlur, value, name } = field;
+  const { onChange, value } = field;
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
@@ -66,10 +64,6 @@ export function MultiSelectField({
     }
   };
 
-  const handleRemove = (optionValue: string) => {
-    const newValues = selectedValues.filter((v) => v !== optionValue);
-    onChange(newValues);
-  };
 
   const filteredOptions = searchable
     ? options.filter((option) =>
@@ -94,7 +88,10 @@ export function MultiSelectField({
           <div className="flex flex-wrap gap-1 flex-1">
             {selectedOptions.length > 0 ? (
               selectedOptions.map((option) => (
-                <span key={option.value} className="bg-primary/10 text-primary px-2 py-1 rounded text-xs">
+                <span
+                  key={option.value}
+                  className="bg-primary/10 text-primary px-2 py-1 rounded text-xs"
+                >
                   {option.label}
                 </span>
               ))
@@ -111,7 +108,10 @@ export function MultiSelectField({
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width)] p-0"
+        align="start"
+      >
         <Command>
           {searchable && (
             <CommandInput

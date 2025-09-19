@@ -28,8 +28,6 @@ interface DateFieldProps {
 
 export function DateField({
   field,
-  id,
-  required,
   className,
   placeholder,
   error,
@@ -37,7 +35,7 @@ export function DateField({
   maxDate,
   showTime = false,
 }: DateFieldProps) {
-  const { onChange, onBlur, value, name } = field;
+  const { onChange, value } = field;
   const [isOpen, setIsOpen] = useState(false);
 
   const validateDate = (date: Date): string | null => {

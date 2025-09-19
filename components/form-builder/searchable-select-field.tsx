@@ -33,15 +33,12 @@ interface SearchableSelectFieldProps {
 
 export function SearchableSelectField({
   field,
-  id,
-  required,
   className,
   placeholder,
   error,
   options,
-  clearable = false,
 }: SearchableSelectFieldProps) {
-  const { onChange, onBlur, value, name } = field;
+  const { onChange, value } = field;
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
@@ -53,9 +50,6 @@ export function SearchableSelectField({
     setSearchValue("");
   };
 
-  const handleClear = () => {
-    onChange("");
-  };
 
   const filteredOptions = options.filter((option) =>
     option.label.toLowerCase().includes(searchValue.toLowerCase())
@@ -81,7 +75,7 @@ export function SearchableSelectField({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Command>
           <CommandInput
             placeholder="Search options..."
