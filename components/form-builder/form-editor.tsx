@@ -282,7 +282,7 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
           if (field.multiple) {
             validator = yup.array().of(yup.mixed());
           } else {
-            validator = yup.mixed();
+            validator = yup.mixed().nullable();
           }
           if (field.required) {
             validator = validator.required(
@@ -297,17 +297,32 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
             validator = validator.required(
               field.requiredMessage || `${field.label} is required`
             );
+          } else {
+            validator = validator.nullable();
           }
+          // Apply min/max validation only if the value is not null/undefined
           if (typeof field.min === "number") {
-            validator = (validator as yup.NumberSchema).min(
-              field.min,
-              field.minMessage || `${field.label} must be at least ${field.min}`
+            validator = (validator as yup.NumberSchema).test(
+              'min',
+              field.minMessage || `${field.label} must be at least ${field.min}`,
+              function(value) {
+                if (value == null || value === undefined) return true; // Skip min validation for null/undefined
+                // If custom validation exists, let it handle the validation
+                if (field.customValidation) return true;
+                return value >= field.min!;
+              }
             );
           }
           if (typeof field.max === "number") {
-            validator = (validator as yup.NumberSchema).max(
-              field.max,
-              field.maxMessage || `${field.label} must be at most ${field.max}`
+            validator = (validator as yup.NumberSchema).test(
+              'max',
+              field.maxMessage || `${field.label} must be at most ${field.max}`,
+              function(value) {
+                if (value == null || value === undefined) return true; // Skip max validation for null/undefined
+                // If custom validation exists, let it handle the validation
+                if (field.customValidation) return true;
+                return value <= field.max!;
+              }
             );
           }
           break;
@@ -368,9 +383,9 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
             defaultValues[field.name] =
               field.defaultValue || (field.multiple ? [] : null);
             break;
-          case "number":
-            defaultValues[field.name] = field.defaultValue ?? 0;
-            break;
+        case "number":
+          defaultValues[field.name] = field.defaultValue ?? undefined;
+          break;
         }
       });
 
@@ -492,6 +507,7 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
                                     field={formField}
                                     min={field.min}
                                     max={field.max}
+                                    placeholder={field.placeholder}
                                     className={cn(baseClass, field.className)}
                                     error={!!fieldState.error}
                                   />
@@ -531,6 +547,7 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
                                   <SelectField
                                     id={name}
                                     field={formField}
+                                    required={required}
                                     placeholder={field.placeholder}
                                     className={cn(baseClass, field.className)}
                                     error={!!fieldState.error}

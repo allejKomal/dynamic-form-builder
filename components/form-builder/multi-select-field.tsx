@@ -75,6 +75,7 @@ export function MultiSelectField({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={field.name}
           variant="outline"
           role="combobox"
           aria-expanded={open}

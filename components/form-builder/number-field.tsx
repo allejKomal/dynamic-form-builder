@@ -13,6 +13,7 @@ interface NumberInputProps {
   className: string;
   error?: boolean;
   step?: number;
+  placeholder?: string;
 }
 
 export function NumberInput({
@@ -24,6 +25,7 @@ export function NumberInput({
   className,
   error,
   step,
+  placeholder,
 }: NumberInputProps) {
   const { onChange, onBlur, value, name } = field;
   const [localError, setLocalError] = useState<string | null>(null);
@@ -55,7 +57,8 @@ export function NumberInput({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    onChange(newValue);
+    // Convert empty string to undefined to avoid defaulting to 0
+    onChange(newValue === "" ? undefined : newValue);
 
     // Clear local error when user starts typing
     if (localError) {
@@ -76,12 +79,11 @@ export function NumberInput({
       <Input
         id={id}
         type="number"
-        min={min}
-        max={max}
         step={step}
+        placeholder={placeholder}
         onChange={handleChange}
         onBlur={handleBlur}
-        value={value}
+        value={value || ""}
         name={name as string}
         className={`${className} ${
           showError ? "border-destructive ring-destructive/20" : ""
