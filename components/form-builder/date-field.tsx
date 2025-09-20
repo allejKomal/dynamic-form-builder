@@ -68,7 +68,7 @@ export function DateField({
     }
   };
 
-  const displayValue = value ? format(new Date(value), showTime ? "PPP p" : "PPP") : "";
+  const displayValue = value && typeof value === 'string' ? format(new Date(value), showTime ? "PPP p" : "PPP") : "";
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -90,7 +90,7 @@ export function DateField({
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
-          selected={value ? new Date(value) : undefined}
+          selected={value && typeof value === 'string' ? new Date(value) : undefined}
           onSelect={handleDateSelect}
           disabled={(date) => {
             if (minDate && date < new Date(minDate)) return true;

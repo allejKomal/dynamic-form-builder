@@ -66,7 +66,7 @@ export function SelectField({
   return (
     <div className="space-y-1">
       <Select
-        value={value || undefined}
+        value={typeof value === 'string' ? value : undefined}
         onValueChange={handleValueChange}
         onOpenChange={(open) => {
           if (!open) {

@@ -10,7 +10,7 @@ export type BaseFieldConfig = {
   requiredMessage?: string;
   className?: string;
   customValidation?: (
-    value: string | number
+    value: string | number | boolean | string[] | number[] | boolean[] | File | File[] | null | undefined
   ) => string | boolean | Promise<string | boolean>;
   customValidationMessage?: string;
   disableError?: boolean;
@@ -135,6 +135,33 @@ export type FileFieldConfig = BaseFieldConfig & {
   defaultValue?: File | File[] | null;
 };
 
+export type ArrayItemConfig = 
+  | Omit<TextFieldConfig, "name" | "type">
+  | Omit<EmailFieldConfig, "name" | "type">
+  | Omit<NumberFieldConfig, "name" | "type">
+  | Omit<TextAreaFieldConfig, "name" | "type">
+  | Omit<PasswordFieldConfig, "name" | "type">
+  | Omit<UrlFieldConfig, "name" | "type">
+  | Omit<SelectFieldConfig, "name" | "type">
+  | Omit<MultiSelectFieldConfig, "name" | "type">
+  | Omit<SearchableSelectFieldConfig, "name" | "type">
+  | Omit<CheckboxFieldConfig, "name" | "type">
+  | Omit<DateFieldConfig, "name" | "type">
+  | Omit<FileFieldConfig, "name" | "type">;
+
+export type ArrayFieldConfig = BaseFieldConfig & {
+  type: "array";
+  itemType: Exclude<FieldConfig["type"], "array">;
+  itemConfig: ArrayItemConfig;
+  minItems?: number;
+  maxItems?: number;
+  addButtonText?: string;
+  removeButtonText?: string;
+  defaultValue?: (string | number | boolean | File)[];
+  minItemsMessage?: string;
+  maxItemsMessage?: string;
+};
+
 export type FieldConfig =
   | TextFieldConfig
   | EmailFieldConfig
@@ -147,4 +174,5 @@ export type FieldConfig =
   | SearchableSelectFieldConfig
   | CheckboxFieldConfig
   | DateFieldConfig
-  | FileFieldConfig;
+  | FileFieldConfig
+  | ArrayFieldConfig;

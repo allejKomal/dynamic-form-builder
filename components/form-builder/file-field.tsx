@@ -146,7 +146,7 @@ export function FileField({
               key={index}
               className="flex items-center justify-between p-2 border rounded-md"
             >
-              <span className="text-sm truncate">{file.name}</span>
+              <span className="text-sm truncate">{file instanceof File ? file.name : 'Unknown file'}</span>
               <Button
                 type="button"
                 variant="ghost"

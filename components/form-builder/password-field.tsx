@@ -85,7 +85,7 @@ export function PasswordField({
   const showError = error || localError;
 
   const getRequirementStatus = (requirement: PasswordRequirement) => {
-    if (!value) return null;
+    if (!value || typeof value !== 'string') return null;
     return requirement.test(value);
   };
 
@@ -98,7 +98,7 @@ export function PasswordField({
           placeholder={placeholder}
           onChange={handleChange}
           onBlur={handleBlur}
-          value={value}
+          value={typeof value === 'string' ? value : ""}
           name={name as string}
           className={cn(
             "pr-10 w-full",

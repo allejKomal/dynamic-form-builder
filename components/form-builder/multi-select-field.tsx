@@ -45,7 +45,7 @@ export function MultiSelectField({
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
-  const selectedValues = Array.isArray(value) ? value : [];
+  const selectedValues = Array.isArray(value) ? value as string[] : [];
   const selectedOptions = options.filter((option) =>
     selectedValues.includes(option.value)
   );

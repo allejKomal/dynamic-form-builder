@@ -58,7 +58,7 @@ export function EmailInput({
         type="email"
         onChange={handleChange}
         onBlur={handleBlur}
-        value={value}
+        value={typeof value === 'string' ? value : ""}
         name={name as string}
         className={`${className} ${
           showError ? "border-destructive ring-destructive/20" : ""

@@ -66,7 +66,21 @@ export const defaultFields: FieldConfig[] = [
     requiredMessage: "Age is required",
     minMessage: "You must be at least 18 years old",
     maxMessage: "Age cannot exceed 120 years",
-    customValidation: (value: string | number) => {
+    customValidation: (
+      value:
+        | string
+        | number
+        | boolean
+        | string[]
+        | number[]
+        | boolean[]
+        | File
+        | File[]
+        | null
+        | undefined
+    ) => {
+      if (typeof value !== "string" && typeof value !== "number")
+        return "Please enter a valid age";
       const numValue = typeof value === "string" ? parseFloat(value) : value;
       if (isNaN(numValue)) return "Please enter a valid age";
       if (numValue < 0) return "Age cannot be negative";
@@ -84,7 +98,20 @@ export const defaultFields: FieldConfig[] = [
     required: false,
     placeholder: "Enter your website URL (optional)",
     requiredMessage: "Website URL is required",
-    customValidation: async (value: string | number) => {
+    customValidation: async (
+      value:
+        | string
+        | number
+        | boolean
+        | string[]
+        | number[]
+        | boolean[]
+        | File
+        | File[]
+        | null
+        | undefined
+    ) => {
+      if (typeof value !== "string" && typeof value !== "number") return true;
       const strValue = String(value);
       if (!strValue) return true; // Optional field
 
@@ -252,19 +279,28 @@ export const defaultFields: FieldConfig[] = [
     required: true,
     placeholder: "This field uses a custom render component",
     renderComponent: ({ field, fieldState, fieldConfig }) => {
-      const React = require('react');
-      return React.createElement('div', { className: 'space-y-2' },
-        React.createElement('input', {
+      const React = require("react");
+      return React.createElement(
+        "div",
+        { className: "space-y-2" },
+        React.createElement("input", {
           ...field,
           className: `w-full px-3 py-2 border rounded-md ${
-            fieldState.invalid ? 'border-red-500' : 'border-gray-300'
+            fieldState.invalid ? "border-red-500" : "border-gray-300"
           }`,
-          placeholder: fieldConfig.placeholder
+          placeholder: fieldConfig.placeholder,
         }),
-        fieldState.invalid && fieldState.error && 
-          React.createElement('p', { className: 'text-red-500 text-sm' }, fieldState.error.message),
-        React.createElement('div', { className: 'text-xs text-gray-500' },
-          'Custom rendered field with additional info'
+        fieldState.invalid &&
+          fieldState.error &&
+          React.createElement(
+            "p",
+            { className: "text-red-500 text-sm" },
+            fieldState.error.message
+          ),
+        React.createElement(
+          "div",
+          { className: "text-xs text-gray-500" },
+          "Custom rendered field with additional info"
         )
       );
     },
@@ -277,7 +313,21 @@ export const defaultFields: FieldConfig[] = [
     placeholder: "Enter a strong password",
     requiredMessage: "Password is required",
     defaultShowPassword: true,
-    customValidation: (value: string | number) => {
+    customValidation: (
+      value:
+        | string
+        | number
+        | boolean
+        | string[]
+        | number[]
+        | boolean[]
+        | File
+        | File[]
+        | null
+        | undefined
+    ) => {
+      if (typeof value !== "string" && typeof value !== "number")
+        return "Password is required";
       const strValue = String(value);
       if (!strValue) return "Password is required";
 
@@ -299,5 +349,95 @@ export const defaultFields: FieldConfig[] = [
       return true;
     },
     customValidationMessage: "Password does not meet security requirements",
+  },
+  {
+    name: "hobbies",
+    label: "Hobbies",
+    type: "array",
+    required: false,
+    itemType: "text",
+    itemConfig: {
+      label: "Hobby",
+      placeholder: "Enter a hobby",
+      required: true,
+    },
+    minItems: 0,
+    maxItems: 5,
+    addButtonText: "Add Hobby",
+    removeButtonText: "Remove",
+    defaultValue: ["Reading", "Gaming"],
+  },
+  {
+    name: "contactNumbers",
+    label: "Contact Numbers",
+    type: "array",
+    required: true,
+    itemType: "text",
+    itemConfig: {
+      label: "Phone Number",
+      placeholder: "Enter phone number",
+      required: true,
+      regex: /^\+?[\d\s\-\(\)]+$/,
+      regexMessage: "Please enter a valid phone number format",
+    },
+    minItems: 2,
+    maxItems: 3,
+    addButtonText: "Add Number",
+    removeButtonText: "Remove",
+    requiredMessage: "At least one contact number is required",
+    minItemsMessage: "Please provide at least 2 contact numbers",
+    maxItemsMessage: "Maximum 3 contact numbers allowed",
+    defaultValue: [],
+  },
+  {
+    name: "skills",
+    label: "Technical Skills",
+    type: "array",
+    required: false,
+    itemType: "select",
+    itemConfig: {
+      label: "Skill",
+      placeholder: "Select a skill",
+      required: true,
+      options: [
+        { value: "javascript", label: "JavaScript" },
+        { value: "typescript", label: "TypeScript" },
+        { value: "react", label: "React" },
+        { value: "vue", label: "Vue.js" },
+        { value: "angular", label: "Angular" },
+        { value: "node", label: "Node.js" },
+        { value: "python", label: "Python" },
+        { value: "java", label: "Java" },
+        { value: "csharp", label: "C#" },
+        { value: "php", label: "PHP" },
+      ],
+      clearable: true,
+    },
+    minItems: 0,
+    maxItems: 10,
+    addButtonText: "Add Skill",
+    removeButtonText: "Remove",
+  },
+  {
+    name: "workExperience",
+    label: "Work Experience",
+    type: "array",
+    required: true,
+    itemType: "textarea",
+    itemConfig: {
+      label: "Experience Description",
+      placeholder: "Describe your work experience",
+      required: true,
+      maxlength: 500,
+      maxlengthMessage: "Experience description must be 500 characters or less",
+    },
+    minItems: 1,
+    maxItems: 5,
+    addButtonText: "Add Experience",
+    removeButtonText: "Remove",
+    requiredMessage: "At least one work experience is required",
+    minItemsMessage: "Please provide at least one work experience",
+    maxItemsMessage: "Maximum 5 work experiences allowed",
+    defaultValue: [], // Start with empty array to trigger validation
   },
 ];

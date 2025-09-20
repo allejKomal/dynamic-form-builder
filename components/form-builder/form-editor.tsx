@@ -23,6 +23,7 @@ import { SearchableSelectField } from "./searchable-select-field";
 import { CheckboxField } from "./checkbox-field";
 import { DateField } from "./date-field";
 import { FileField } from "./file-field";
+import { ArrayField } from "./array-field";
 import { cn } from "@/lib/utils";
 import { defaultFields as fields } from "@/data/default-form";
 import { FieldConfig } from "@/types/fields-type";
@@ -33,18 +34,43 @@ const validateOn:
   | "onSubmit"
   | "onTouched"
   | "all"
-  | undefined = "onBlur";
+  | undefined = "all";
 
 const baseClass = "w-full";
 
-export type FormData = Record<string, any>;
+export type FormData = Record<
+  string,
+  | string
+  | number
+  | boolean
+  | string[]
+  | number[]
+  | boolean[]
+  | File
+  | File[]
+  | null
+  | undefined
+>;
 
 export interface FormEditorRef {
   form: UseFormReturn<FormData>;
   submit: () => void;
   reset: () => void;
   getValues: () => FormData;
-  setValue: (name: keyof FormData, value: unknown) => void;
+  setValue: (
+    name: keyof FormData,
+    value:
+      | string
+      | number
+      | boolean
+      | string[]
+      | number[]
+      | boolean[]
+      | File
+      | File[]
+      | null
+      | undefined
+  ) => void;
   clearErrors: () => void;
 }
 
@@ -77,10 +103,10 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
     },
     ref
   ) => {
-    const schemaShape: Record<string, yup.AnySchema> = {};
+    const schemaShape: Record<string, yup.Schema<unknown>> = {};
 
     fields.forEach((field) => {
-      let validator: yup.AnySchema;
+      let validator: yup.Schema<unknown>;
 
       if (field.disableError) {
         validator = yup.mixed();
@@ -303,9 +329,10 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
           // Apply min/max validation only if the value is not null/undefined
           if (typeof field.min === "number") {
             validator = (validator as yup.NumberSchema).test(
-              'min',
-              field.minMessage || `${field.label} must be at least ${field.min}`,
-              function(value) {
+              "min",
+              field.minMessage ||
+                `${field.label} must be at least ${field.min}`,
+              function (value) {
                 if (value == null || value === undefined) return true; // Skip min validation for null/undefined
                 // If custom validation exists, let it handle the validation
                 if (field.customValidation) return true;
@@ -315,14 +342,37 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
           }
           if (typeof field.max === "number") {
             validator = (validator as yup.NumberSchema).test(
-              'max',
+              "max",
               field.maxMessage || `${field.label} must be at most ${field.max}`,
-              function(value) {
+              function (value) {
                 if (value == null || value === undefined) return true; // Skip max validation for null/undefined
                 // If custom validation exists, let it handle the validation
                 if (field.customValidation) return true;
                 return value <= field.max!;
               }
+            );
+          }
+          break;
+
+        case "array":
+          validator = yup.array();
+          if (field.required) {
+            validator = validator.required(
+              field.requiredMessage || `${field.label} is required`
+            );
+          }
+          if (field.minItems !== undefined) {
+            validator = (validator as yup.ArraySchema<unknown[], unknown>).min(
+              field.minItems,
+              field.minItemsMessage ||
+                `${field.label} must have at least ${field.minItems} items`
+            );
+          }
+          if (field.maxItems !== undefined) {
+            validator = (validator as yup.ArraySchema<unknown[], unknown>).max(
+              field.maxItems,
+              field.maxItemsMessage ||
+                `${field.label} must have at most ${field.maxItems} items`
             );
           }
           break;
@@ -338,7 +388,7 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
           field.customValidationMessage || `${field.label} is invalid`,
           async function (value) {
             try {
-              const result = await field.customValidation!(value);
+              const result = await field.customValidation!(value as string | number | boolean | string[] | number[] | boolean[] | File | File[] | null | undefined);
               return result === true || result === "";
             } catch {
               return false;
@@ -383,9 +433,13 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
             defaultValues[field.name] =
               field.defaultValue || (field.multiple ? [] : null);
             break;
-        case "number":
-          defaultValues[field.name] = field.defaultValue ?? undefined;
-          break;
+          case "number":
+            defaultValues[field.name] = field.defaultValue ?? undefined;
+            break;
+          case "array":
+            defaultValues[field.name] =
+              (field.defaultValue as string[] | number[] | boolean[]) || [];
+            break;
         }
       });
 
@@ -411,8 +465,20 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
         onReset?.();
       },
       getValues: () => form.getValues(),
-       setValue: (name: keyof FormData, value: unknown) =>
-         form.setValue(name, value),
+      setValue: (
+        name: keyof FormData,
+        value:
+          | string
+          | number
+          | boolean
+          | string[]
+          | number[]
+          | boolean[]
+          | File
+          | File[]
+          | null
+          | undefined
+      ) => form.setValue(name, value),
       clearErrors: () => form.clearErrors(),
     }));
 
@@ -430,11 +496,69 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
     };
 
     const handleSubmit = (data: FormData) => {
-      if (onSubmit) {
-        onSubmit(data);
-      } else {
-        console.log("Form submitted:", data);
-      }
+      // First, manually validate array fields
+      const arrayFields = fields.filter((field) => field.type === "array");
+      arrayFields.forEach((field) => {
+        const value = data[field.name];
+        const arrayValue = Array.isArray(value) ? value : [];
+
+        // Check minItems validation
+        if (
+          field.minItems !== undefined &&
+          arrayValue.length < field.minItems
+        ) {
+          form.setError(field.name as keyof FormData, {
+            type: "manual",
+            message:
+              field.minItemsMessage ||
+              `${field.label} must have at least ${field.minItems} items`,
+          });
+        }
+
+        // Check maxItems validation
+        if (
+          field.maxItems !== undefined &&
+          arrayValue.length > field.maxItems
+        ) {
+          form.setError(field.name as keyof FormData, {
+            type: "manual",
+            message:
+              field.maxItemsMessage ||
+              `${field.label} must have at most ${field.maxItems} items`,
+          });
+        }
+
+        // Check required validation
+        if (field.required && arrayValue.length === 0) {
+          form.setError(field.name as keyof FormData, {
+            type: "manual",
+            message: field.requiredMessage || `${field.label} is required`,
+          });
+        }
+      });
+
+      // Trigger validation for all fields to show errors
+      const validationPromises = fields.map((field) =>
+        form.trigger(field.name as keyof FormData)
+      );
+
+      Promise.all(validationPromises).then(() => {
+        // Check if form is valid after validation
+        const errors = form.formState.errors;
+        const hasErrors = Object.keys(errors).length > 0;
+
+        if (hasErrors) {
+          // Form has validation errors, they should now be visible
+          console.log("Form validation errors:", errors);
+          return;
+        }
+
+        if (onSubmit) {
+          onSubmit(data);
+        } else {
+          console.log("Form submitted:", data);
+        }
+      });
     };
 
     return (
@@ -612,6 +736,15 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
                                     multiple={field.multiple}
                                     maxSize={field.maxSize}
                                     maxFiles={field.maxFiles}
+                                  />
+                                )}
+                                {type === "array" && (
+                                  <ArrayField
+                                    field={formField}
+                                    fieldConfig={field}
+                                    className={cn(baseClass, field.className)}
+                                    error={!!fieldState.error}
+                                    fieldState={fieldState}
                                   />
                                 )}
                               </>

@@ -83,7 +83,7 @@ export function NumberInput({
         placeholder={placeholder}
         onChange={handleChange}
         onBlur={handleBlur}
-        value={value || ""}
+        value={typeof value === 'number' ? value : ""}
         name={name as string}
         className={`${className} ${
           showError ? "border-destructive ring-destructive/20" : ""
