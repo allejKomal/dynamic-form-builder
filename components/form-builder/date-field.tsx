@@ -52,8 +52,7 @@ export function DateField({
     if (selectedDate) {
       const validationError = validateDate(selectedDate);
       if (validationError) {
-        alert(validationError);
-        return;
+         return;
       }
       
       if (showTime) {

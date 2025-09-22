@@ -32,17 +32,19 @@ export function FileField({
 
   const validateFiles = (files: FileList | File[]): string | null => {
     const fileArray = Array.from(files);
-    
+
     if (maxFiles && fileArray.length > maxFiles) {
       return `Maximum ${maxFiles} files allowed`;
     }
-    
+
     for (const file of fileArray) {
       if (maxSize && file.size > maxSize) {
-        return `File "${file.name}" is too large. Maximum size is ${Math.round(maxSize / 1024 / 1024)}MB`;
+        return `File "${file.name}" is too large. Maximum size is ${Math.round(
+          maxSize / 1024 / 1024
+        )}MB`;
       }
     }
-    
+
     return null;
   };
 
@@ -52,10 +54,9 @@ export function FileField({
       const validationError = validateFiles(files);
       if (validationError) {
         // Show error but don't prevent file selection
-        alert(validationError);
         return;
       }
-      
+
       if (multiple) {
         onChange(Array.from(files));
       } else {
@@ -77,10 +78,9 @@ export function FileField({
     if (files) {
       const validationError = validateFiles(files);
       if (validationError) {
-        alert(validationError);
         return;
       }
-      
+
       if (multiple) {
         onChange(Array.from(files));
       } else {
@@ -98,7 +98,13 @@ export function FileField({
     }
   };
 
-  const files = multiple ? (Array.isArray(field.value) ? field.value : []) : (field.value ? [field.value] : []);
+  const files = multiple
+    ? Array.isArray(field.value)
+      ? field.value
+      : []
+    : field.value
+    ? [field.value]
+    : [];
 
   return (
     <div className="space-y-4">
@@ -137,7 +143,7 @@ export function FileField({
           </div>
         </div>
       </div>
-      
+
       {files.length > 0 && (
         <div className="space-y-2">
           <div className="text-sm font-medium">Selected files:</div>
@@ -146,7 +152,9 @@ export function FileField({
               key={index}
               className="flex items-center justify-between p-2 border rounded-md"
             >
-              <span className="text-sm truncate">{file instanceof File ? file.name : 'Unknown file'}</span>
+              <span className="text-sm truncate">
+                {file instanceof File ? file.name : "Unknown file"}
+              </span>
               <Button
                 type="button"
                 variant="ghost"

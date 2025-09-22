@@ -24,7 +24,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../ui/sheet";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { TextInput } from "./input-field";
 import { EmailInput } from "./email-field";
 import { NumberInput } from "./number-field";
@@ -40,6 +39,10 @@ import { FileField } from "./file-field";
 import { ArrayField } from "./array-field";
 import { cn } from "@/lib/utils";
 import { FieldConfig } from "@/types/fields-type";
+import { generateDefaultValues } from "@/utils/generate-default";
+import { Tabs, TabsContent, TabsTrigger, TabsList } from "../ui/tabs";
+import { ResetDialog } from "../reset-dialog";
+import { toast } from "sonner";
 
 const baseClass = "w-full";
 
@@ -440,60 +443,14 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
       schemaShape[field.name] = validator;
     });
 
-    const generateDefaultValues = () => {
-      const defaultValues: FormData = {};
-
-      fields.forEach((field) => {
-        switch (field.type) {
-          case "text":
-          case "textarea":
-          case "email":
-          case "password":
-          case "url":
-          case "date":
-            defaultValues[field.name] = field.defaultValue || "";
-            break;
-          case "select":
-          case "searchable-select":
-            defaultValues[field.name] = field.defaultValue || "";
-            break;
-          case "multi-select":
-            defaultValues[field.name] = field.defaultValue || [];
-            break;
-          case "checkbox":
-            // For checkbox fields with custom values, use uncheckedValue as default
-            if (field.uncheckedValue !== undefined) {
-              defaultValues[field.name] =
-                field.defaultValue ?? field.uncheckedValue;
-            } else {
-              defaultValues[field.name] = field.defaultValue ?? false;
-            }
-            break;
-          case "file":
-            defaultValues[field.name] =
-              field.defaultValue || (field.multiple ? [] : null);
-            break;
-          case "number":
-            defaultValues[field.name] = field.defaultValue ?? undefined;
-            break;
-          case "array":
-            defaultValues[field.name] =
-              (field.defaultValue as string[] | number[] | boolean[]) || [];
-            break;
-        }
-      });
-
-      return defaultValues;
-    };
-
     const schema = yup
       .object()
       .shape(schemaShape) as yup.ObjectSchema<FormData>;
 
     const form = useForm<FormData>({
       resolver: yupResolver(schema),
-      defaultValues: generateDefaultValues(),
-      mode: validateOn, // Changed to onChange for real-time validation
+      defaultValues: generateDefaultValues(fields) as FormData,
+      mode: validateOn,
     });
 
     // Metadata state for debugging/development
@@ -556,7 +513,7 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
       form,
       submit: () => form.handleSubmit(handleSubmit)(),
       reset: () => {
-        form.reset(generateDefaultValues());
+        form.reset(generateDefaultValues(fields) as FormData);
         form.clearErrors();
         onReset?.();
       },
@@ -580,26 +537,19 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
     }));
 
     const handleReset = () => {
-      if (
-        window.confirm(
-          "Are you sure you want to reset the form? All changes will be lost."
-        )
-      ) {
-        const defaultValues = generateDefaultValues();
-        // Reset form with default values and clear all errors
-        form.reset(defaultValues, {
-          keepDefaultValues: true,
-          keepValues: false,
-          keepDirty: false,
-          keepIsSubmitted: false,
-          keepIsValid: false,
-          keepTouched: false,
-          keepIsValidating: false,
-          keepSubmitCount: false,
-        });
-        // Call custom onReset if provided
-        onReset?.();
-      }
+      const defaultValues = generateDefaultValues(fields) as FormData;
+      // Reset form with default values and clear all errors
+      form.reset(defaultValues, {
+        keepDefaultValues: true,
+        keepValues: false,
+        keepDirty: false,
+        keepIsSubmitted: false,
+        keepIsValid: false,
+        keepTouched: false,
+        keepIsValidating: false,
+        keepSubmitCount: false,
+      });
+      onReset?.();
     };
 
     const handleSubmit = (data: FormData) => {
@@ -660,6 +610,8 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
           return;
         }
 
+        toast.success("Form submitted successfully");
+
         if (onSubmit) {
           onSubmit(data);
         } else {
@@ -669,452 +621,412 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
     };
 
     return (
-      <Sheet>
-        <div className={className}>
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(handleSubmit)}
-              noValidate
-              className={`space-y-6 ${formClassName}`}
-            >
-              {fields.map((field) => {
-                const { name, label, type, required } = field;
+      <>
+        <Sheet>
+          <div className={className}>
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(handleSubmit)}
+                noValidate
+                className={`space-y-6 ${formClassName}`}
+              >
+                {fields.map((field) => {
+                  const { name, label, type, required } = field;
 
-                return (
-                  <FormField
-                    key={name}
-                    control={form.control}
-                    name={name as keyof FormData}
-                    // Remove rules prop to avoid conflicts with schema
-                    render={({ field: formField, fieldState }) => (
-                      <FormItem
-                        className={
-                          labelPosition === "left"
-                            ? "flex gap-5 items-start"
-                            : "space-y-2"
-                        }
-                      >
-                        <FormLabel
-                          htmlFor={name}
-                          className={`text-sm font-medium text-gray-700 ${
-                            labelPosition === "left" ? "min-w-[200px] pt-2" : ""
-                          }`}
+                  return (
+                    <FormField
+                      key={name}
+                      control={form.control}
+                      name={name as keyof FormData}
+                      // Remove rules prop to avoid conflicts with schema
+                      render={({ field: formField, fieldState }) => (
+                        <FormItem
+                          className={cn(
+                            labelPosition === "left"
+                              ? "flex gap-5 items-start"
+                              : "space-y-2",
+                            className
+                          )}
                         >
-                          {label}{" "}
-                          {required && <span className="text-red-500">*</span>}
-                        </FormLabel>
-                        <div
-                          className={labelPosition === "left" ? "flex-1" : ""}
-                        >
-                          <FormControl>
-                            <div key={name}>
-                              {field.renderComponent ? (
-                                field.renderComponent({
-                                  field: formField,
-                                  fieldState,
-                                  fieldConfig: field,
-                                })
-                              ) : (
-                                <>
-                                  {type === "text" && (
-                                    <TextInput
-                                      id={name}
-                                      field={formField}
-                                      placeholder={field.placeholder}
-                                      maxLength={field.maxlength}
-                                      className={cn(baseClass, field.className)}
-                                      error={!!fieldState.error}
-                                    />
-                                  )}
-                                  {type === "email" && (
-                                    <EmailInput
-                                      id={name}
-                                      field={formField}
-                                      placeholder={field.placeholder}
-                                      className={cn(baseClass, field.className)}
-                                      error={!!fieldState.error}
-                                    />
-                                  )}
-                                  {type === "number" && (
-                                    <NumberInput
-                                      id={name}
-                                      field={formField}
-                                      min={field.min}
-                                      max={field.max}
-                                      placeholder={field.placeholder}
-                                      className={cn(baseClass, field.className)}
-                                      error={!!fieldState.error}
-                                    />
-                                  )}
-                                  {type === "textarea" && (
-                                    <TextAreaInput
-                                      id={name}
-                                      field={formField}
-                                      placeholder={field.placeholder}
-                                      maxLength={field.maxlength}
-                                      className={cn(baseClass, field.className)}
-                                      error={!!fieldState.error}
-                                    />
-                                  )}
-                                  {type === "password" && (
-                                    <PasswordField
-                                      id={name}
-                                      field={formField}
-                                      placeholder={field.placeholder}
-                                      className={cn(baseClass, field.className)}
-                                      error={!!fieldState.error}
-                                      defaultShowPassword={
-                                        field.defaultShowPassword
-                                      }
-                                    />
-                                  )}
-                                  {type === "url" && (
-                                    <UrlField
-                                      id={name}
-                                      field={formField}
-                                      placeholder={field.placeholder}
-                                      className={cn(baseClass, field.className)}
-                                      error={!!fieldState.error}
-                                    />
-                                  )}
-                                  {type === "select" && (
-                                    <SelectField
-                                      id={name}
-                                      field={formField}
-                                      required={required}
-                                      placeholder={field.placeholder}
-                                      className={cn(baseClass, field.className)}
-                                      error={!!fieldState.error}
-                                      options={field.options}
-                                      clearable={field.clearable}
-                                    />
-                                  )}
-                                  {type === "multi-select" && (
-                                    <MultiSelectField
-                                      id={name}
-                                      field={formField}
-                                      placeholder={field.placeholder}
-                                      className={cn(baseClass, field.className)}
-                                      error={!!fieldState.error}
-                                      options={field.options}
-                                      searchable={field.searchable}
-                                      maxSelections={field.maxSelections}
-                                    />
-                                  )}
-                                  {type === "searchable-select" && (
-                                    <SearchableSelectField
-                                      id={name}
-                                      field={formField}
-                                      placeholder={field.placeholder}
-                                      className={cn(baseClass, field.className)}
-                                      error={!!fieldState.error}
-                                      options={field.options}
-                                      clearable={field.clearable}
-                                    />
-                                  )}
-                                  {type === "checkbox" && (
-                                    <CheckboxField
-                                      id={name}
-                                      field={formField}
-                                      className={cn(baseClass, field.className)}
-                                      error={!!fieldState.error}
-                                      checkedValue={field.checkedValue}
-                                      uncheckedValue={field.uncheckedValue}
-                                      labelPosition={field.labelPosition}
-                                      label={label}
-                                    />
-                                  )}
-                                  {type === "date" && (
-                                    <DateField
-                                      id={name}
-                                      field={formField}
-                                      placeholder={field.placeholder}
-                                      className={cn(baseClass, field.className)}
-                                      error={!!fieldState.error}
-                                      minDate={field.minDate}
-                                      maxDate={field.maxDate}
-                                      showTime={field.showTime}
-                                    />
-                                  )}
-                                  {type === "file" && (
-                                    <FileField
-                                      id={name}
-                                      field={formField}
-                                      className={cn(baseClass, field.className)}
-                                      error={!!fieldState.error}
-                                      accept={field.accept}
-                                      multiple={field.multiple}
-                                      maxSize={field.maxSize}
-                                      maxFiles={field.maxFiles}
-                                    />
-                                  )}
-                                  {type === "array" && (
-                                    <ArrayField
-                                      field={formField}
-                                      fieldConfig={field}
-                                      className={cn(baseClass, field.className)}
-                                      error={!!fieldState.error}
-                                      fieldState={fieldState}
-                                    />
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          </FormControl>
-                          {!field.disableErrorMessage &&
-                            !field.renderComponent && <FormMessage />}
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                );
-              })}
-            {showButtons && (
-              <div className="flex justify-center gap-4 pt-6 border-t border-gray-200">
-                <Button type="submit" className="px-8">
-                  {submitButtonText}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleReset}
-                  className="px-8"
-                >
-                  {resetButtonText}
-                </Button>
-                {showMetadata && (
-                  <SheetTrigger asChild>
-                    <Button type="button" variant="secondary" className="px-8">
-                      📊 Debug Info
+                          <FormLabel
+                            htmlFor={name}
+                            className={`text-sm font-medium text-gray-700 ${
+                              labelPosition === "left"
+                                ? "min-w-[200px] pt-2"
+                                : ""
+                            }`}
+                          >
+                            {label}{" "}
+                            {required && (
+                              <span className="text-red-500">*</span>
+                            )}
+                          </FormLabel>
+                          <div
+                            className={labelPosition === "left" ? "flex-1" : ""}
+                          >
+                            <FormControl>
+                              <div key={name}>
+                                {field.renderComponent ? (
+                                  field.renderComponent({
+                                    field: formField,
+                                    fieldState,
+                                    fieldConfig: field,
+                                  })
+                                ) : (
+                                  <>
+                                    {type === "text" && (
+                                      <TextInput
+                                        id={name}
+                                        field={formField}
+                                        placeholder={field.placeholder}
+                                        maxLength={field.maxlength}
+                                        className={cn(
+                                          baseClass,
+                                          field.className
+                                        )}
+                                        error={!!fieldState.error}
+                                      />
+                                    )}
+                                    {type === "email" && (
+                                      <EmailInput
+                                        id={name}
+                                        field={formField}
+                                        placeholder={field.placeholder}
+                                        className={cn(
+                                          baseClass,
+                                          field.className
+                                        )}
+                                        error={!!fieldState.error}
+                                      />
+                                    )}
+                                    {type === "number" && (
+                                      <NumberInput
+                                        id={name}
+                                        field={formField}
+                                        min={field.min}
+                                        max={field.max}
+                                        placeholder={field.placeholder}
+                                        className={cn(
+                                          baseClass,
+                                          field.className
+                                        )}
+                                        error={!!fieldState.error}
+                                      />
+                                    )}
+                                    {type === "textarea" && (
+                                      <TextAreaInput
+                                        id={name}
+                                        field={formField}
+                                        placeholder={field.placeholder}
+                                        maxLength={field.maxlength}
+                                        className={cn(
+                                          baseClass,
+                                          field.className
+                                        )}
+                                        error={!!fieldState.error}
+                                      />
+                                    )}
+                                    {type === "password" && (
+                                      <PasswordField
+                                        id={name}
+                                        field={formField}
+                                        placeholder={field.placeholder}
+                                        className={cn(
+                                          baseClass,
+                                          field.className
+                                        )}
+                                        error={!!fieldState.error}
+                                        defaultShowPassword={
+                                          field.defaultShowPassword
+                                        }
+                                      />
+                                    )}
+                                    {type === "url" && (
+                                      <UrlField
+                                        id={name}
+                                        field={formField}
+                                        placeholder={field.placeholder}
+                                        className={cn(
+                                          baseClass,
+                                          field.className
+                                        )}
+                                        error={!!fieldState.error}
+                                      />
+                                    )}
+                                    {type === "select" && (
+                                      <SelectField
+                                        id={name}
+                                        field={formField}
+                                        required={required}
+                                        placeholder={field.placeholder}
+                                        className={cn(
+                                          baseClass,
+                                          field.className
+                                        )}
+                                        error={!!fieldState.error}
+                                        options={field.options}
+                                        clearable={field.clearable}
+                                      />
+                                    )}
+                                    {type === "multi-select" && (
+                                      <MultiSelectField
+                                        id={name}
+                                        field={formField}
+                                        placeholder={field.placeholder}
+                                        className={cn(
+                                          baseClass,
+                                          field.className
+                                        )}
+                                        error={!!fieldState.error}
+                                        options={field.options}
+                                        searchable={field.searchable}
+                                        maxSelections={field.maxSelections}
+                                      />
+                                    )}
+                                    {type === "searchable-select" && (
+                                      <SearchableSelectField
+                                        id={name}
+                                        field={formField}
+                                        placeholder={field.placeholder}
+                                        className={cn(
+                                          baseClass,
+                                          field.className
+                                        )}
+                                        error={!!fieldState.error}
+                                        options={field.options}
+                                        clearable={field.clearable}
+                                      />
+                                    )}
+                                    {type === "checkbox" && (
+                                      <CheckboxField
+                                        id={name}
+                                        field={formField}
+                                        className={cn(
+                                          baseClass,
+                                          field.className
+                                        )}
+                                        error={!!fieldState.error}
+                                        checkedValue={field.checkedValue}
+                                        uncheckedValue={field.uncheckedValue}
+                                        labelPosition={field.labelPosition}
+                                        label={label}
+                                      />
+                                    )}
+                                    {type === "date" && (
+                                      <DateField
+                                        id={name}
+                                        field={formField}
+                                        placeholder={field.placeholder}
+                                        className={cn(
+                                          baseClass,
+                                          field.className
+                                        )}
+                                        error={!!fieldState.error}
+                                        minDate={field.minDate}
+                                        maxDate={field.maxDate}
+                                        showTime={field.showTime}
+                                      />
+                                    )}
+                                    {type === "file" && (
+                                      <FileField
+                                        id={name}
+                                        field={formField}
+                                        className={cn(
+                                          baseClass,
+                                          field.className
+                                        )}
+                                        error={!!fieldState.error}
+                                        accept={field.accept}
+                                        multiple={field.multiple}
+                                        maxSize={field.maxSize}
+                                        maxFiles={field.maxFiles}
+                                      />
+                                    )}
+                                    {type === "array" && (
+                                      <ArrayField
+                                        field={formField}
+                                        fieldConfig={field}
+                                        className={cn(
+                                          baseClass,
+                                          field.className
+                                        )}
+                                        error={!!fieldState.error}
+                                        fieldState={fieldState}
+                                      />
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </FormControl>
+                            {!field.disableErrorMessage &&
+                              !field.renderComponent && <FormMessage />}
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  );
+                })}
+                {showButtons && (
+                  <div className="flex justify-center gap-4 pt-6 border-t border-gray-200">
+                    <Button type="submit" className="px-8">
+                      {submitButtonText}
                     </Button>
-                  </SheetTrigger>
-                )}
-              </div>
-            )}
-              {children}
-            </form>
-          </Form>
-        </div>
-
-        {showMetadata && (
-          <SheetContent side="right" className="w-[600px] overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>Form Metadata</SheetTitle>
-              <SheetDescription>
-                Debug information about form state, validation, and schema
-              </SheetDescription>
-            </SheetHeader>
-
-            <div className="space-y-4 p-4">
-              {/* Yup Validation Schema */}
-              {metadataOptions.showSchema && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      Yup Validation Schema
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {formMetadata.schema ? (
-                      <pre className="text-xs bg-gray-50 p-3 rounded overflow-auto max-h-40">
-                        {JSON.stringify(
-                          formMetadata.schema.describe(),
-                          null,
-                          2
-                        )}
-                      </pre>
-                    ) : (
-                      <div className="text-sm text-gray-500">
-                        Schema not available yet
-                      </div>
+                    <ResetDialog
+                      onReset={handleReset}
+                      buttonText={resetButtonText}
+                    />
+                    {showMetadata && (
+                      <SheetTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="px-8"
+                        >
+                          📊 Debug Info
+                        </Button>
+                      </SheetTrigger>
                     )}
-                  </CardContent>
-                </Card>
-              )}
+                  </div>
+                )}
+                {children}
+              </form>
+            </Form>
+          </div>
 
-              {/* Field Configuration */}
-              {metadataOptions.showFieldConfig && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      Field Configuration
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <pre className="text-xs bg-gray-50 p-3 rounded overflow-auto max-h-40">
-                      {JSON.stringify(fields, null, 2)}
-                    </pre>
-                  </CardContent>
-                </Card>
-              )}
+          {showMetadata && (
+            <SheetContent
+              side="right"
+              className="min-w-[900px] px-4 flex flex-col h-full"
+            >
+              <SheetHeader className="flex-shrink-0">
+                <SheetTitle>Form Metadata</SheetTitle>
+                <SheetDescription>
+                  Debug information about form state, validation, and schema
+                </SheetDescription>
+              </SheetHeader>
 
-              {/* Form State */}
-              {metadataOptions.showFormState && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Form State</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div
-                        className={`px-2 py-1 rounded ${
-                          formMetadata.isValid
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        Valid: {formMetadata.isValid ? "Yes" : "No"}
-                      </div>
-                      <div
-                        className={`px-2 py-1 rounded ${
-                          formMetadata.isDirty
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        Dirty: {formMetadata.isDirty ? "Yes" : "No"}
-                      </div>
-                      <div
-                        className={`px-2 py-1 rounded ${
-                          formMetadata.isSubmitted
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        Submitted: {formMetadata.isSubmitted ? "Yes" : "No"}
-                      </div>
-                      <div
-                        className={`px-2 py-1 rounded ${
-                          formMetadata.isValidating
-                            ? "bg-orange-100 text-orange-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        Validating: {formMetadata.isValidating ? "Yes" : "No"}
-                      </div>
+              <Tabs
+                defaultValue="schema"
+                className="flex-1 flex flex-col min-h-0"
+              >
+                <TabsList className="flex-shrink-0">
+                  <TabsTrigger value="schema">Schema</TabsTrigger>
+                  <TabsTrigger value="fieldConfig">Field Config</TabsTrigger>
+                  <TabsTrigger value="formState">Form State</TabsTrigger>
+                  <TabsTrigger value="currentValues">
+                    Current Values
+                  </TabsTrigger>
+                  <TabsTrigger value="errors">Errors</TabsTrigger>
+                  <TabsTrigger value="dirtyFields">Dirty Fields</TabsTrigger>
+                  <TabsTrigger value="touchedFields">
+                    Touched Fields
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="schema" className="flex-1 min-h-0">
+                  <div className="h-full flex flex-col">
+                    <div className="p-4 border-b flex-shrink-0">
+                      <h3 className="text-lg font-semibold">
+                        Yup Validation Schema
+                      </h3>
                     </div>
-                    <div className="text-sm">
-                      <span className="font-medium">Submit Count:</span>{" "}
-                      {formMetadata.submitCount}
+                    <div className="flex-1 p-4 overflow-auto min-h-0">
+                      {formMetadata.schema ? (
+                        <pre className="text-xs bg-gray-50 p-3 rounded">
+                          {JSON.stringify(
+                            formMetadata.schema.describe(),
+                            null,
+                            2
+                          )}
+                        </pre>
+                      ) : (
+                        <div className="text-sm text-gray-500">
+                          Schema not available yet
+                        </div>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Current Values */}
-              {metadataOptions.showCurrentValues && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Current Values</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <pre className="text-xs bg-gray-50 p-3 rounded overflow-auto max-h-40">
-                      {JSON.stringify(formMetadata.values, null, 2)}
-                    </pre>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Errors */}
-              {metadataOptions.showErrors && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Validation Errors</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {Object.keys(formMetadata.errors).length > 0 ? (
-                      <pre className="text-xs bg-red-50 p-3 rounded overflow-auto max-h-40 text-red-800">
+                  </div>
+                </TabsContent>
+                <TabsContent value="fieldConfig" className="flex-1 min-h-0">
+                  <div className="h-full flex flex-col">
+                    <div className="p-4 border-b flex-shrink-0">
+                      <h3 className="text-lg font-semibold">
+                        Field Configuration
+                      </h3>
+                    </div>
+                    <div className="flex-1 p-4 overflow-auto min-h-0">
+                      <pre className="text-xs bg-gray-50 p-3 rounded">
+                        {JSON.stringify(fields, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent value="formState" className="flex-1 min-h-0">
+                  <div className="h-full flex flex-col">
+                    <div className="p-4 border-b flex-shrink-0">
+                      <h3 className="text-lg font-semibold">Form State</h3>
+                    </div>
+                    <div className="flex-1 p-4 overflow-auto min-h-0">
+                      <pre className="text-xs bg-gray-50 p-3 rounded">
+                        {JSON.stringify(formMetadata, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent value="currentValues" className="flex-1 min-h-0">
+                  <div className="h-full flex flex-col">
+                    <div className="p-4 border-b flex-shrink-0">
+                      <h3 className="text-lg font-semibold">Current Values</h3>
+                    </div>
+                    <div className="flex-1 p-4 overflow-auto min-h-0">
+                      <pre className="text-xs bg-gray-50 p-3 rounded">
+                        {JSON.stringify(formMetadata.values, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent value="errors" className="flex-1 min-h-0">
+                  <div className="h-full flex flex-col">
+                    <div className="p-4 border-b flex-shrink-0">
+                      <h3 className="text-lg font-semibold">
+                        Validation Errors
+                      </h3>
+                    </div>
+                    <div className="flex-1 p-4 overflow-auto min-h-0">
+                      <pre className="text-xs bg-gray-50 p-3 rounded">
                         {JSON.stringify(formMetadata.errors, null, 2)}
                       </pre>
-                    ) : (
-                      <div className="text-sm text-green-600">
-                        No validation errors
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Dirty Fields */}
-              {metadataOptions.showDirtyFields && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Dirty Fields</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {Object.keys(formMetadata.dirtyFields).length > 0 ? (
-                      <div className="space-y-1">
-                        {Object.entries(formMetadata.dirtyFields).map(
-                          ([field, isDirty]) => {
-                            const isFieldDirty = Array.isArray(isDirty)
-                              ? isDirty.some(Boolean)
-                              : Boolean(isDirty);
-                            return (
-                              <div
-                                key={field}
-                                className={`text-sm px-2 py-1 rounded ${
-                                  isFieldDirty
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-gray-100 text-gray-800"
-                                }`}
-                              >
-                                {field}: {isFieldDirty ? "Modified" : "Clean"}
-                              </div>
-                            );
-                          }
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-sm text-gray-500">
-                        No dirty fields
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Touched Fields */}
-              {metadataOptions.showTouchedFields && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Touched Fields</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {Object.keys(formMetadata.touchedFields).length > 0 ? (
-                      <div className="space-y-1">
-                        {Object.entries(formMetadata.touchedFields).map(
-                          ([field, isTouched]) => {
-                            const isFieldTouched = Array.isArray(isTouched)
-                              ? isTouched.some(Boolean)
-                              : Boolean(isTouched);
-                            return (
-                              <div
-                                key={field}
-                                className={`text-sm px-2 py-1 rounded ${
-                                  isFieldTouched
-                                    ? "bg-blue-100 text-blue-800"
-                                    : "bg-gray-100 text-gray-800"
-                                }`}
-                              >
-                                {field}:{" "}
-                                {isFieldTouched ? "Touched" : "Untouched"}
-                              </div>
-                            );
-                          }
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-sm text-gray-500">
-                        No touched fields
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </SheetContent>
-        )}
-      </Sheet>
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent value="dirtyFields" className="flex-1 min-h-0">
+                  <div className="h-full flex flex-col">
+                    <div className="p-4 border-b flex-shrink-0">
+                      <h3 className="text-lg font-semibold">Dirty Fields</h3>
+                    </div>
+                    <div className="flex-1 p-4 overflow-auto min-h-0">
+                      <pre className="text-xs bg-gray-50 p-3 rounded">
+                        {JSON.stringify(formMetadata.dirtyFields, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent value="touchedFields" className="flex-1 min-h-0">
+                  <div className="h-full flex flex-col">
+                    <div className="p-4 border-b flex-shrink-0">
+                      <h3 className="text-lg font-semibold">Touched Fields</h3>
+                    </div>
+                    <div className="flex-1 p-4 overflow-auto min-h-0">
+                      <pre className="text-xs bg-gray-50 p-3 rounded">
+                        {JSON.stringify(formMetadata.touchedFields, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </SheetContent>
+          )}
+        </Sheet>
+      </>
     );
   }
 );

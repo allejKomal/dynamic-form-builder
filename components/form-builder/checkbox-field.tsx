@@ -37,7 +37,7 @@ export function CheckboxField({
   const isChecked = Boolean(value === checkedValue);
 
   return (
-    <div className={cn("flex items-center space-x-2", className)}>
+    <div className={cn("flex items-center space-x-2 h-full mt-2", className)}>
       {label && labelPosition === "left" && (
         <Label htmlFor={id} className="text-sm font-medium">
           {label} {required && "*"}
