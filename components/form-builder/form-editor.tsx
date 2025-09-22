@@ -1,4 +1,9 @@
-import React, { forwardRef, useImperativeHandle } from "react";
+import React, {
+  forwardRef,
+  useImperativeHandle,
+  useState,
+  useEffect,
+} from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -11,6 +16,15 @@ import {
   FormMessage,
 } from "../ui/form";
 import { Button } from "../ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "../ui/sheet";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { TextInput } from "./input-field";
 import { EmailInput } from "./email-field";
 import { NumberInput } from "./number-field";
@@ -25,16 +39,7 @@ import { DateField } from "./date-field";
 import { FileField } from "./file-field";
 import { ArrayField } from "./array-field";
 import { cn } from "@/lib/utils";
-import { defaultFields as fields } from "@/data/default-form";
 import { FieldConfig } from "@/types/fields-type";
-
-const validateOn:
-  | "onChange"
-  | "onBlur"
-  | "onSubmit"
-  | "onTouched"
-  | "all"
-  | undefined = "all";
 
 const baseClass = "w-full";
 
@@ -72,6 +77,7 @@ export interface FormEditorRef {
       | undefined
   ) => void;
   clearErrors: () => void;
+  getSchema: () => yup.ObjectSchema<FormData>;
 }
 
 interface FormEditorProps {
@@ -85,6 +91,17 @@ interface FormEditorProps {
   submitButtonText?: string;
   resetButtonText?: string;
   children?: React.ReactNode;
+  validateOn?: "onChange" | "onBlur" | "onSubmit" | "onTouched" | "all";
+  showMetadata?: boolean;
+  metadataOptions?: {
+    showSchema?: boolean;
+    showFieldConfig?: boolean;
+    showFormState?: boolean;
+    showCurrentValues?: boolean;
+    showErrors?: boolean;
+    showDirtyFields?: boolean;
+    showTouchedFields?: boolean;
+  };
 }
 
 const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
@@ -100,6 +117,17 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
       submitButtonText = "Submit",
       resetButtonText = "Reset Form",
       children,
+      validateOn = "all",
+      showMetadata = false,
+      metadataOptions = {
+        showSchema: true,
+        showFieldConfig: true,
+        showFormState: true,
+        showCurrentValues: true,
+        showErrors: true,
+        showDirtyFields: true,
+        showTouchedFields: true,
+      },
     },
     ref
   ) => {
@@ -388,7 +416,19 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
           field.customValidationMessage || `${field.label} is invalid`,
           async function (value) {
             try {
-              const result = await field.customValidation!(value as string | number | boolean | string[] | number[] | boolean[] | File | File[] | null | undefined);
+              const result = await field.customValidation!(
+                value as
+                  | string
+                  | number
+                  | boolean
+                  | string[]
+                  | number[]
+                  | boolean[]
+                  | File
+                  | File[]
+                  | null
+                  | undefined
+              );
               return result === true || result === "";
             } catch {
               return false;
@@ -456,6 +496,62 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
       mode: validateOn, // Changed to onChange for real-time validation
     });
 
+    // Metadata state for debugging/development
+    const [formMetadata, setFormMetadata] = useState<{
+      values: FormData;
+      errors: Record<string, string | string[]>;
+      dirtyFields: Record<string, boolean | boolean[]>;
+      touchedFields: Record<string, boolean | boolean[]>;
+      isValid: boolean;
+      isDirty: boolean;
+      isSubmitted: boolean;
+      isValidating: boolean;
+      submitCount: number;
+      schema: { describe: () => unknown } | null;
+    }>({
+      values: {},
+      errors: {},
+      dirtyFields: {},
+      touchedFields: {},
+      isValid: false,
+      isDirty: false,
+      isSubmitted: false,
+      isValidating: false,
+      submitCount: 0,
+      schema: null,
+    });
+
+    // Update metadata periodically when showMetadata is true
+    useEffect(() => {
+      if (!showMetadata) return;
+
+      const interval = setInterval(() => {
+        setFormMetadata({
+          values: form.getValues(),
+          errors: form.formState.errors as unknown as Record<
+            string,
+            string | string[]
+          >,
+          dirtyFields: form.formState.dirtyFields as Record<
+            string,
+            boolean | boolean[]
+          >,
+          touchedFields: form.formState.touchedFields as Record<
+            string,
+            boolean | boolean[]
+          >,
+          isValid: form.formState.isValid,
+          isDirty: form.formState.isDirty,
+          isSubmitted: form.formState.isSubmitted,
+          isValidating: form.formState.isValidating,
+          submitCount: form.formState.submitCount,
+          schema: schema as { describe: () => unknown } | null,
+        });
+      }, 100);
+
+      return () => clearInterval(interval);
+    }, [showMetadata, form, schema]);
+
     useImperativeHandle(ref, () => ({
       form,
       submit: () => form.handleSubmit(handleSubmit)(),
@@ -480,6 +576,7 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
           | undefined
       ) => form.setValue(name, value),
       clearErrors: () => form.clearErrors(),
+      getSchema: () => schema,
     }));
 
     const handleReset = () => {
@@ -488,8 +585,18 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
           "Are you sure you want to reset the form? All changes will be lost."
         )
       ) {
-        form.reset(generateDefaultValues());
-        form.clearErrors();
+        const defaultValues = generateDefaultValues();
+        // Reset form with default values and clear all errors
+        form.reset(defaultValues, {
+          keepDefaultValues: true,
+          keepValues: false,
+          keepDirty: false,
+          keepIsSubmitted: false,
+          keepIsValid: false,
+          keepTouched: false,
+          keepIsValidating: false,
+          keepSubmitCount: false,
+        });
         // Call custom onReset if provided
         onReset?.();
       }
@@ -562,203 +669,206 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
     };
 
     return (
-      <div className={className}>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleSubmit)}
-            noValidate
-            className={`space-y-6 ${formClassName}`}
-          >
-            {fields.map((field) => {
-              const { name, label, type, required } = field;
+      <Sheet>
+        <div className={className}>
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(handleSubmit)}
+              noValidate
+              className={`space-y-6 ${formClassName}`}
+            >
+              {fields.map((field) => {
+                const { name, label, type, required } = field;
 
-              return (
-                <FormField
-                  key={name}
-                  control={form.control}
-                  name={name as keyof FormData}
-                  // Remove rules prop to avoid conflicts with schema
-                  render={({ field: formField, fieldState }) => (
-                    <FormItem
-                      className={
-                        labelPosition === "left"
-                          ? "flex gap-5 items-start"
-                          : "space-y-2"
-                      }
-                    >
-                      <FormLabel
-                        htmlFor={name}
-                        className={`text-sm font-medium text-gray-700 ${
-                          labelPosition === "left" ? "min-w-[200px] pt-2" : ""
-                        }`}
+                return (
+                  <FormField
+                    key={name}
+                    control={form.control}
+                    name={name as keyof FormData}
+                    // Remove rules prop to avoid conflicts with schema
+                    render={({ field: formField, fieldState }) => (
+                      <FormItem
+                        className={
+                          labelPosition === "left"
+                            ? "flex gap-5 items-start"
+                            : "space-y-2"
+                        }
                       >
-                        {label}{" "}
-                        {required && <span className="text-red-500">*</span>}
-                      </FormLabel>
-                      <div className={labelPosition === "left" ? "flex-1" : ""}>
-                        <FormControl>
-                          <div key={name}>
-                            {field.renderComponent ? (
-                              field.renderComponent({
-                                field: formField,
-                                fieldState,
-                                fieldConfig: field,
-                              })
-                            ) : (
-                              <>
-                                {type === "text" && (
-                                  <TextInput
-                                    id={name}
-                                    field={formField}
-                                    placeholder={field.placeholder}
-                                    maxLength={field.maxlength}
-                                    className={cn(baseClass, field.className)}
-                                    error={!!fieldState.error}
-                                  />
-                                )}
-                                {type === "email" && (
-                                  <EmailInput
-                                    id={name}
-                                    field={formField}
-                                    placeholder={field.placeholder}
-                                    className={cn(baseClass, field.className)}
-                                    error={!!fieldState.error}
-                                  />
-                                )}
-                                {type === "number" && (
-                                  <NumberInput
-                                    id={name}
-                                    field={formField}
-                                    min={field.min}
-                                    max={field.max}
-                                    placeholder={field.placeholder}
-                                    className={cn(baseClass, field.className)}
-                                    error={!!fieldState.error}
-                                  />
-                                )}
-                                {type === "textarea" && (
-                                  <TextAreaInput
-                                    id={name}
-                                    field={formField}
-                                    placeholder={field.placeholder}
-                                    maxLength={field.maxlength}
-                                    className={cn(baseClass, field.className)}
-                                    error={!!fieldState.error}
-                                  />
-                                )}
-                                {type === "password" && (
-                                  <PasswordField
-                                    id={name}
-                                    field={formField}
-                                    placeholder={field.placeholder}
-                                    className={cn(baseClass, field.className)}
-                                    error={!!fieldState.error}
-                                    defaultShowPassword={
-                                      field.defaultShowPassword
-                                    }
-                                  />
-                                )}
-                                {type === "url" && (
-                                  <UrlField
-                                    id={name}
-                                    field={formField}
-                                    placeholder={field.placeholder}
-                                    className={cn(baseClass, field.className)}
-                                    error={!!fieldState.error}
-                                  />
-                                )}
-                                {type === "select" && (
-                                  <SelectField
-                                    id={name}
-                                    field={formField}
-                                    required={required}
-                                    placeholder={field.placeholder}
-                                    className={cn(baseClass, field.className)}
-                                    error={!!fieldState.error}
-                                    options={field.options}
-                                    clearable={field.clearable}
-                                  />
-                                )}
-                                {type === "multi-select" && (
-                                  <MultiSelectField
-                                    id={name}
-                                    field={formField}
-                                    placeholder={field.placeholder}
-                                    className={cn(baseClass, field.className)}
-                                    error={!!fieldState.error}
-                                    options={field.options}
-                                    searchable={field.searchable}
-                                    maxSelections={field.maxSelections}
-                                  />
-                                )}
-                                {type === "searchable-select" && (
-                                  <SearchableSelectField
-                                    id={name}
-                                    field={formField}
-                                    placeholder={field.placeholder}
-                                    className={cn(baseClass, field.className)}
-                                    error={!!fieldState.error}
-                                    options={field.options}
-                                    clearable={field.clearable}
-                                  />
-                                )}
-                                {type === "checkbox" && (
-                                  <CheckboxField
-                                    id={name}
-                                    field={formField}
-                                    className={cn(baseClass, field.className)}
-                                    error={!!fieldState.error}
-                                    checkedValue={field.checkedValue}
-                                    uncheckedValue={field.uncheckedValue}
-                                    labelPosition={field.labelPosition}
-                                    label={label}
-                                  />
-                                )}
-                                {type === "date" && (
-                                  <DateField
-                                    id={name}
-                                    field={formField}
-                                    placeholder={field.placeholder}
-                                    className={cn(baseClass, field.className)}
-                                    error={!!fieldState.error}
-                                    minDate={field.minDate}
-                                    maxDate={field.maxDate}
-                                    showTime={field.showTime}
-                                  />
-                                )}
-                                {type === "file" && (
-                                  <FileField
-                                    id={name}
-                                    field={formField}
-                                    className={cn(baseClass, field.className)}
-                                    error={!!fieldState.error}
-                                    accept={field.accept}
-                                    multiple={field.multiple}
-                                    maxSize={field.maxSize}
-                                    maxFiles={field.maxFiles}
-                                  />
-                                )}
-                                {type === "array" && (
-                                  <ArrayField
-                                    field={formField}
-                                    fieldConfig={field}
-                                    className={cn(baseClass, field.className)}
-                                    error={!!fieldState.error}
-                                    fieldState={fieldState}
-                                  />
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </FormControl>
-                        {!field.disableErrorMessage &&
-                          !field.renderComponent && <FormMessage />}
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              );
-            })}
+                        <FormLabel
+                          htmlFor={name}
+                          className={`text-sm font-medium text-gray-700 ${
+                            labelPosition === "left" ? "min-w-[200px] pt-2" : ""
+                          }`}
+                        >
+                          {label}{" "}
+                          {required && <span className="text-red-500">*</span>}
+                        </FormLabel>
+                        <div
+                          className={labelPosition === "left" ? "flex-1" : ""}
+                        >
+                          <FormControl>
+                            <div key={name}>
+                              {field.renderComponent ? (
+                                field.renderComponent({
+                                  field: formField,
+                                  fieldState,
+                                  fieldConfig: field,
+                                })
+                              ) : (
+                                <>
+                                  {type === "text" && (
+                                    <TextInput
+                                      id={name}
+                                      field={formField}
+                                      placeholder={field.placeholder}
+                                      maxLength={field.maxlength}
+                                      className={cn(baseClass, field.className)}
+                                      error={!!fieldState.error}
+                                    />
+                                  )}
+                                  {type === "email" && (
+                                    <EmailInput
+                                      id={name}
+                                      field={formField}
+                                      placeholder={field.placeholder}
+                                      className={cn(baseClass, field.className)}
+                                      error={!!fieldState.error}
+                                    />
+                                  )}
+                                  {type === "number" && (
+                                    <NumberInput
+                                      id={name}
+                                      field={formField}
+                                      min={field.min}
+                                      max={field.max}
+                                      placeholder={field.placeholder}
+                                      className={cn(baseClass, field.className)}
+                                      error={!!fieldState.error}
+                                    />
+                                  )}
+                                  {type === "textarea" && (
+                                    <TextAreaInput
+                                      id={name}
+                                      field={formField}
+                                      placeholder={field.placeholder}
+                                      maxLength={field.maxlength}
+                                      className={cn(baseClass, field.className)}
+                                      error={!!fieldState.error}
+                                    />
+                                  )}
+                                  {type === "password" && (
+                                    <PasswordField
+                                      id={name}
+                                      field={formField}
+                                      placeholder={field.placeholder}
+                                      className={cn(baseClass, field.className)}
+                                      error={!!fieldState.error}
+                                      defaultShowPassword={
+                                        field.defaultShowPassword
+                                      }
+                                    />
+                                  )}
+                                  {type === "url" && (
+                                    <UrlField
+                                      id={name}
+                                      field={formField}
+                                      placeholder={field.placeholder}
+                                      className={cn(baseClass, field.className)}
+                                      error={!!fieldState.error}
+                                    />
+                                  )}
+                                  {type === "select" && (
+                                    <SelectField
+                                      id={name}
+                                      field={formField}
+                                      required={required}
+                                      placeholder={field.placeholder}
+                                      className={cn(baseClass, field.className)}
+                                      error={!!fieldState.error}
+                                      options={field.options}
+                                      clearable={field.clearable}
+                                    />
+                                  )}
+                                  {type === "multi-select" && (
+                                    <MultiSelectField
+                                      id={name}
+                                      field={formField}
+                                      placeholder={field.placeholder}
+                                      className={cn(baseClass, field.className)}
+                                      error={!!fieldState.error}
+                                      options={field.options}
+                                      searchable={field.searchable}
+                                      maxSelections={field.maxSelections}
+                                    />
+                                  )}
+                                  {type === "searchable-select" && (
+                                    <SearchableSelectField
+                                      id={name}
+                                      field={formField}
+                                      placeholder={field.placeholder}
+                                      className={cn(baseClass, field.className)}
+                                      error={!!fieldState.error}
+                                      options={field.options}
+                                      clearable={field.clearable}
+                                    />
+                                  )}
+                                  {type === "checkbox" && (
+                                    <CheckboxField
+                                      id={name}
+                                      field={formField}
+                                      className={cn(baseClass, field.className)}
+                                      error={!!fieldState.error}
+                                      checkedValue={field.checkedValue}
+                                      uncheckedValue={field.uncheckedValue}
+                                      labelPosition={field.labelPosition}
+                                      label={label}
+                                    />
+                                  )}
+                                  {type === "date" && (
+                                    <DateField
+                                      id={name}
+                                      field={formField}
+                                      placeholder={field.placeholder}
+                                      className={cn(baseClass, field.className)}
+                                      error={!!fieldState.error}
+                                      minDate={field.minDate}
+                                      maxDate={field.maxDate}
+                                      showTime={field.showTime}
+                                    />
+                                  )}
+                                  {type === "file" && (
+                                    <FileField
+                                      id={name}
+                                      field={formField}
+                                      className={cn(baseClass, field.className)}
+                                      error={!!fieldState.error}
+                                      accept={field.accept}
+                                      multiple={field.multiple}
+                                      maxSize={field.maxSize}
+                                      maxFiles={field.maxFiles}
+                                    />
+                                  )}
+                                  {type === "array" && (
+                                    <ArrayField
+                                      field={formField}
+                                      fieldConfig={field}
+                                      className={cn(baseClass, field.className)}
+                                      error={!!fieldState.error}
+                                      fieldState={fieldState}
+                                    />
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </FormControl>
+                          {!field.disableErrorMessage &&
+                            !field.renderComponent && <FormMessage />}
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                );
+              })}
             {showButtons && (
               <div className="flex justify-center gap-4 pt-6 border-t border-gray-200">
                 <Button type="submit" className="px-8">
@@ -772,12 +882,239 @@ const SimpleFormBuilder = forwardRef<FormEditorRef, FormEditorProps>(
                 >
                   {resetButtonText}
                 </Button>
+                {showMetadata && (
+                  <SheetTrigger asChild>
+                    <Button type="button" variant="secondary" className="px-8">
+                      📊 Debug Info
+                    </Button>
+                  </SheetTrigger>
+                )}
               </div>
             )}
-            {children}
-          </form>
-        </Form>
-      </div>
+              {children}
+            </form>
+          </Form>
+        </div>
+
+        {showMetadata && (
+          <SheetContent side="right" className="w-[600px] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Form Metadata</SheetTitle>
+              <SheetDescription>
+                Debug information about form state, validation, and schema
+              </SheetDescription>
+            </SheetHeader>
+
+            <div className="space-y-4 p-4">
+              {/* Yup Validation Schema */}
+              {metadataOptions.showSchema && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      Yup Validation Schema
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {formMetadata.schema ? (
+                      <pre className="text-xs bg-gray-50 p-3 rounded overflow-auto max-h-40">
+                        {JSON.stringify(
+                          formMetadata.schema.describe(),
+                          null,
+                          2
+                        )}
+                      </pre>
+                    ) : (
+                      <div className="text-sm text-gray-500">
+                        Schema not available yet
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Field Configuration */}
+              {metadataOptions.showFieldConfig && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      Field Configuration
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <pre className="text-xs bg-gray-50 p-3 rounded overflow-auto max-h-40">
+                      {JSON.stringify(fields, null, 2)}
+                    </pre>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Form State */}
+              {metadataOptions.showFormState && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Form State</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div
+                        className={`px-2 py-1 rounded ${
+                          formMetadata.isValid
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        Valid: {formMetadata.isValid ? "Yes" : "No"}
+                      </div>
+                      <div
+                        className={`px-2 py-1 rounded ${
+                          formMetadata.isDirty
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        Dirty: {formMetadata.isDirty ? "Yes" : "No"}
+                      </div>
+                      <div
+                        className={`px-2 py-1 rounded ${
+                          formMetadata.isSubmitted
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        Submitted: {formMetadata.isSubmitted ? "Yes" : "No"}
+                      </div>
+                      <div
+                        className={`px-2 py-1 rounded ${
+                          formMetadata.isValidating
+                            ? "bg-orange-100 text-orange-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        Validating: {formMetadata.isValidating ? "Yes" : "No"}
+                      </div>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium">Submit Count:</span>{" "}
+                      {formMetadata.submitCount}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Current Values */}
+              {metadataOptions.showCurrentValues && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Current Values</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <pre className="text-xs bg-gray-50 p-3 rounded overflow-auto max-h-40">
+                      {JSON.stringify(formMetadata.values, null, 2)}
+                    </pre>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Errors */}
+              {metadataOptions.showErrors && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Validation Errors</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {Object.keys(formMetadata.errors).length > 0 ? (
+                      <pre className="text-xs bg-red-50 p-3 rounded overflow-auto max-h-40 text-red-800">
+                        {JSON.stringify(formMetadata.errors, null, 2)}
+                      </pre>
+                    ) : (
+                      <div className="text-sm text-green-600">
+                        No validation errors
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Dirty Fields */}
+              {metadataOptions.showDirtyFields && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Dirty Fields</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {Object.keys(formMetadata.dirtyFields).length > 0 ? (
+                      <div className="space-y-1">
+                        {Object.entries(formMetadata.dirtyFields).map(
+                          ([field, isDirty]) => {
+                            const isFieldDirty = Array.isArray(isDirty)
+                              ? isDirty.some(Boolean)
+                              : Boolean(isDirty);
+                            return (
+                              <div
+                                key={field}
+                                className={`text-sm px-2 py-1 rounded ${
+                                  isFieldDirty
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-gray-100 text-gray-800"
+                                }`}
+                              >
+                                {field}: {isFieldDirty ? "Modified" : "Clean"}
+                              </div>
+                            );
+                          }
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500">
+                        No dirty fields
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Touched Fields */}
+              {metadataOptions.showTouchedFields && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Touched Fields</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {Object.keys(formMetadata.touchedFields).length > 0 ? (
+                      <div className="space-y-1">
+                        {Object.entries(formMetadata.touchedFields).map(
+                          ([field, isTouched]) => {
+                            const isFieldTouched = Array.isArray(isTouched)
+                              ? isTouched.some(Boolean)
+                              : Boolean(isTouched);
+                            return (
+                              <div
+                                key={field}
+                                className={`text-sm px-2 py-1 rounded ${
+                                  isFieldTouched
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-gray-100 text-gray-800"
+                                }`}
+                              >
+                                {field}:{" "}
+                                {isFieldTouched ? "Touched" : "Untouched"}
+                              </div>
+                            );
+                          }
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500">
+                        No touched fields
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </SheetContent>
+        )}
+      </Sheet>
     );
   }
 );

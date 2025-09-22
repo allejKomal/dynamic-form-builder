@@ -57,8 +57,9 @@ export function NumberInput({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    // Convert empty string to undefined to avoid defaulting to 0
-    onChange(newValue === "" ? undefined : newValue);
+    // Convert to number if it's a valid number, otherwise keep as string for validation
+    const numericValue = newValue === "" ? "" : (isNaN(Number(newValue)) ? newValue : Number(newValue));
+    onChange(numericValue);
 
     // Clear local error when user starts typing
     if (localError) {
@@ -83,7 +84,7 @@ export function NumberInput({
         placeholder={placeholder}
         onChange={handleChange}
         onBlur={handleBlur}
-        value={typeof value === 'number' ? value : ""}
+        value={value === undefined || value === null ? "" : String(value)}
         name={name as string}
         className={`${className} ${
           showError ? "border-destructive ring-destructive/20" : ""

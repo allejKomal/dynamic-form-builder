@@ -81,6 +81,17 @@ export function ArrayField({
     onChange(newValue);
   };
 
+  // Check if array has valid items (non-empty values)
+  const hasValidItems = () => {
+    return arrayValue.some(item => {
+      if (typeof item === 'string') return item.trim() !== '';
+      if (typeof item === 'number') return item !== 0;
+      if (typeof item === 'boolean') return true;
+      if (Array.isArray(item)) return item.length > 0;
+      return item !== null && item !== undefined;
+    });
+  };
+
   const updateItem = (
     index: number,
     newValue:
@@ -336,15 +347,24 @@ export function ArrayField({
 
   return (
     <div className={cn("space-y-4", className)}>
-      <div className="space-y-3">
+      <div className={cn(
+        "space-y-3 p-3 rounded-md border",
+        error || fieldState?.invalid 
+          ? "border-red-300 bg-red-50" 
+          : "border-gray-200"
+      )}>
         {arrayValue.map((item, index) => (
           <div
             key={index}
             className={cn(
               "flex items-start gap-3",
               error || fieldState?.invalid
-                ? "border-red-300 bg"
-                : "border"
+                ? "border-red-300 bg-red-50"
+                : "border-gray-200",
+              // Add error styling only to first item when no valid items
+              index === 0 && minItems > 0 && arrayValue.length > 0 && !hasValidItems()
+                ? "border-red-300 bg-red-50"
+                : ""
             )}
           >
             <div className="flex-1">{renderItemField(item, index)}</div>
@@ -373,9 +393,23 @@ export function ArrayField({
         {maxItems && ` (${arrayValue.length}/${maxItems})`}
       </Button>
 
+      {/* Show validation error message */}
+      {fieldState?.error?.message && (
+        <p className="text-sm text-red-600 mt-2">
+          {fieldState.error.message}
+        </p>
+      )}
+
       {maxItems && arrayValue.length >= maxItems && (
         <p className="text-sm text-gray-500 text-center">
           Maximum {maxItems} items allowed
+        </p>
+      )}
+
+      {/* Show custom error for empty values when minItems is required */}
+      {minItems > 0 && arrayValue.length > 0 && !hasValidItems() && (
+        <p className="text-sm text-red-600 mt-2 text-center">
+          At least {minItems} item{minItems > 1 ? 's' : ''} must have a value
         </p>
       )}
     </div>
