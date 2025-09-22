@@ -55,7 +55,7 @@ export default function RepeatingGroupFormPage() {
 
   return (
     <PageWrapper showBackButton title="Repeating Group Form">
-      <div className="pt-10 max-w-4xl mx-auto">
+      <div className="pt-10 max-w-3xl mx-auto">
         <div className="mb-6">
           <h2 className="text-xl font-semibold mb-2">Repeating Group Form Example</h2>
           <p className="text-gray-600 mb-4">

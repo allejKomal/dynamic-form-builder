@@ -20,8 +20,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.className} antialiased`}>{children}</body>
-      <Toaster />
+      <body className={`${geistSans.className} antialiased`}>
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }

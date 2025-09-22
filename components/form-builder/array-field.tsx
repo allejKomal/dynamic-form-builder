@@ -2,8 +2,8 @@ import React from "react";
 import { ControllerRenderProps } from "react-hook-form";
 import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
-import { 
-  ArrayFieldConfig, 
+import {
+  ArrayFieldConfig,
   ArrayItemConfig,
   TextFieldConfig,
   EmailFieldConfig,
@@ -16,7 +16,7 @@ import {
   SearchableSelectFieldConfig,
   CheckboxFieldConfig,
   DateFieldConfig,
-  FileFieldConfig
+  FileFieldConfig,
 } from "@/types/fields-type";
 import { FormData } from "./form-editor";
 import { TextInput } from "./input-field";
@@ -56,7 +56,18 @@ export function ArrayField({
 }: ArrayFieldProps) {
   const { onChange, value } = field;
 
-  const arrayValue: (string | number | boolean | string[] | number[] | boolean[] | File | File[] | null | undefined)[] = Array.isArray(value) ? value : [];
+  const arrayValue: (
+    | string
+    | number
+    | boolean
+    | string[]
+    | number[]
+    | boolean[]
+    | File
+    | File[]
+    | null
+    | undefined
+  )[] = Array.isArray(value) ? value : [];
 
   const {
     itemType,
@@ -83,10 +94,10 @@ export function ArrayField({
 
   // Check if array has valid items (non-empty values)
   const hasValidItems = () => {
-    return arrayValue.some(item => {
-      if (typeof item === 'string') return item.trim() !== '';
-      if (typeof item === 'number') return item !== 0;
-      if (typeof item === 'boolean') return true;
+    return arrayValue.some((item) => {
+      if (typeof item === "string") return item.trim() !== "";
+      if (typeof item === "number") return item !== 0;
+      if (typeof item === "boolean") return true;
       if (Array.isArray(item)) return item.length > 0;
       return item !== null && item !== undefined;
     });
@@ -132,11 +143,17 @@ export function ArrayField({
         return selectConfig.defaultValue || "";
       }
       case "multi-select": {
-        const multiSelectConfig = config as Omit<MultiSelectFieldConfig, "name" | "type">;
+        const multiSelectConfig = config as Omit<
+          MultiSelectFieldConfig,
+          "name" | "type"
+        >;
         return multiSelectConfig.defaultValue || [];
       }
       case "checkbox": {
-        const checkboxConfig = config as Omit<CheckboxFieldConfig, "name" | "type">;
+        const checkboxConfig = config as Omit<
+          CheckboxFieldConfig,
+          "name" | "type"
+        >;
         if (checkboxConfig.uncheckedValue !== undefined) {
           return checkboxConfig.defaultValue ?? checkboxConfig.uncheckedValue;
         }
@@ -163,7 +180,8 @@ export function ArrayField({
       | File[]
       | null
       | undefined,
-    index: number
+    index: number,
+    error: boolean
   ) => {
     const itemField: ControllerRenderProps<FormData, keyof FormData> = {
       value: itemValue,
@@ -189,13 +207,20 @@ export function ArrayField({
     };
 
     // Show errors for the entire array field when there are validation errors
-    const hasItemError = error || fieldState?.invalid;
+    const hasItemError = error;
 
     const baseProps = {
       field: itemField,
       id: `${field.name}-${index}`,
       className: "w-full",
       error: hasItemError,
+      fieldState: {
+        error: {
+          message: "",
+        },
+        invalid: error,
+      },
+      fieldConfig: itemConfig,
     };
 
     switch (itemType) {
@@ -211,7 +236,10 @@ export function ArrayField({
         );
       }
       case "email": {
-        const emailConfig = itemConfig as Omit<EmailFieldConfig, "name" | "type">;
+        const emailConfig = itemConfig as Omit<
+          EmailFieldConfig,
+          "name" | "type"
+        >;
         return (
           <EmailInput
             {...baseProps}
@@ -221,7 +249,10 @@ export function ArrayField({
         );
       }
       case "number": {
-        const numberConfig = itemConfig as Omit<NumberFieldConfig, "name" | "type">;
+        const numberConfig = itemConfig as Omit<
+          NumberFieldConfig,
+          "name" | "type"
+        >;
         return (
           <NumberInput
             {...baseProps}
@@ -233,7 +264,10 @@ export function ArrayField({
         );
       }
       case "textarea": {
-        const textareaConfig = itemConfig as Omit<TextAreaFieldConfig, "name" | "type">;
+        const textareaConfig = itemConfig as Omit<
+          TextAreaFieldConfig,
+          "name" | "type"
+        >;
         return (
           <TextAreaInput
             {...baseProps}
@@ -244,7 +278,10 @@ export function ArrayField({
         );
       }
       case "password": {
-        const passwordConfig = itemConfig as Omit<PasswordFieldConfig, "name" | "type">;
+        const passwordConfig = itemConfig as Omit<
+          PasswordFieldConfig,
+          "name" | "type"
+        >;
         return (
           <PasswordField
             {...baseProps}
@@ -265,7 +302,10 @@ export function ArrayField({
         );
       }
       case "select": {
-        const selectConfig = itemConfig as Omit<SelectFieldConfig, "name" | "type">;
+        const selectConfig = itemConfig as Omit<
+          SelectFieldConfig,
+          "name" | "type"
+        >;
         return (
           <SelectField
             {...baseProps}
@@ -277,7 +317,10 @@ export function ArrayField({
         );
       }
       case "multi-select": {
-        const multiSelectConfig = itemConfig as Omit<MultiSelectFieldConfig, "name" | "type">;
+        const multiSelectConfig = itemConfig as Omit<
+          MultiSelectFieldConfig,
+          "name" | "type"
+        >;
         return (
           <MultiSelectField
             {...baseProps}
@@ -290,7 +333,10 @@ export function ArrayField({
         );
       }
       case "searchable-select": {
-        const searchableSelectConfig = itemConfig as Omit<SearchableSelectFieldConfig, "name" | "type">;
+        const searchableSelectConfig = itemConfig as Omit<
+          SearchableSelectFieldConfig,
+          "name" | "type"
+        >;
         return (
           <SearchableSelectField
             {...baseProps}
@@ -302,7 +348,10 @@ export function ArrayField({
         );
       }
       case "checkbox": {
-        const checkboxConfig = itemConfig as Omit<CheckboxFieldConfig, "name" | "type">;
+        const checkboxConfig = itemConfig as Omit<
+          CheckboxFieldConfig,
+          "name" | "type"
+        >;
         return (
           <CheckboxField
             {...baseProps}
@@ -347,34 +396,22 @@ export function ArrayField({
 
   return (
     <div className={cn("space-y-4", className)}>
-      <div className={cn(
-        "space-y-3 p-3 rounded-md border",
-        error || fieldState?.invalid 
-          ? "border-red-300 bg-red-50" 
-          : "border-gray-200"
-      )}>
+      <div className={cn("space-y-3")}>
         {arrayValue.map((item, index) => (
-          <div
-            key={index}
-            className={cn(
-              "flex items-start gap-3",
-              error || fieldState?.invalid
-                ? "border-red-300 bg-red-50"
-                : "border-gray-200",
-              // Add error styling only to first item when no valid items
-              index === 0 && minItems > 0 && arrayValue.length > 0 && !hasValidItems()
-                ? "border-red-300 bg-red-50"
-                : ""
-            )}
-          >
-            <div className="flex-1">{renderItemField(item, index)}</div>
+          <div key={index} className={cn("flex items-start gap-3")}>
+            <div className="flex-1">
+              {renderItemField(
+                item,
+                index,
+                error || fieldState?.invalid || false
+              )}
+            </div>
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => removeItem(index)}
               disabled={arrayValue.length <= minItems}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
             >
               {removeButtonText}
             </Button>
@@ -395,9 +432,7 @@ export function ArrayField({
 
       {/* Show validation error message */}
       {fieldState?.error?.message && (
-        <p className="text-sm text-red-600 mt-2">
-          {fieldState.error.message}
-        </p>
+        <p className="text-sm text-red-600 mt-2">{fieldState.error.message}</p>
       )}
 
       {maxItems && arrayValue.length >= maxItems && (
@@ -409,7 +444,7 @@ export function ArrayField({
       {/* Show custom error for empty values when minItems is required */}
       {minItems > 0 && arrayValue.length > 0 && !hasValidItems() && (
         <p className="text-sm text-red-600 mt-2 text-center">
-          At least {minItems} item{minItems > 1 ? 's' : ''} must have a value
+          At least {minItems} item{minItems > 1 ? "s" : ""} must have a value
         </p>
       )}
     </div>

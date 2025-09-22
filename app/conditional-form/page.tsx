@@ -125,7 +125,7 @@ export default function ConditionalFormPage() {
 
   return (
     <PageWrapper showBackButton title="Conditional Form">
-      <div className="pt-10 max-w-4xl mx-auto">
+      <div className="pt-10 max-w-3xl mx-auto">
         <div className="mb-6">
           <h2 className="text-xl font-semibold mb-2">
             Conditional Form Example

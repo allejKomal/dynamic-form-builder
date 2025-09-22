@@ -106,7 +106,7 @@ export default function ExampleOnePage() {
 
   return (
     <PageWrapper showBackButton title="Example One (Context-based)">
-      <main className="min-h-screen bg-gray-50 py-10">
+      <main className="min-h-screen max-w-3xl mx-auto py-10">
         <div className="container mx-auto px-6">
           <h2 className="text-2xl font-bold mb-6">Form with Context-based Architecture</h2>
           <p className="mb-4 text-gray-700">
